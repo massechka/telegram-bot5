@@ -13,7 +13,7 @@ print("🚀 Запуск бота FluxShop...")
 BOT_TOKEN = "8980889906:AAFumieQpR1QvzBfjYeFKzr-OrUKrAN489w"
 CHANNEL_ID = "-1004393648334"
 SELLER_ID = "7389526173"  # @iadza
-SUPPORT_ID = "425544521"  # @rfrpq (ЗАМЕНИТЕ НА РЕАЛЬНЫЙ ID)
+SUPPORT_ID = "8140113992"  # @rfrpq (ЗАМЕНИТЕ НА РЕАЛЬНЫЙ ID)
 WEBAPP_URL = "https://warm-daifuku-2653f5.netlify.app/"
 RULES_URL = "https://fluxsshops.netlify.app"
 # ==========================================
