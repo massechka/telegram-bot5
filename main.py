@@ -8,10 +8,10 @@ import requests
 from datetime import datetime, timezone, timedelta
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 
-print("🚀 ЗАПУСК БОТА FLUXSHOP (МАКСИМАЛЬНАЯ ЗАЩИТА)...")
+print("🚀 ЗАПУСК БОТА FLUXSHOP...")
 
 # ============================================================
-# 1. ТВОИ ДАННЫЕ (ВСЁ УЖЕ ВСТАВЛЕНО)
+# ТВОИ ДАННЫЕ
 # ============================================================
 BOT_TOKEN = "8917418368:AAFzB9LzRbNnYUF8YCK7ILKoGhWWnBLvXs4"
 CHANNEL_ID = "-1004393648334"
@@ -27,9 +27,9 @@ print(f"✅ SELLER_ID: {SELLER_ID}")
 print(f"✅ SUPPORT_ID: {SUPPORT_ID}")
 
 # ============================================================
-# 2. ЗАЩИТА ОТ ЗАСЫПАНИЯ (Flask-сервер)
+# 1. ЗАПУСКАЕМ ВЕБ-СЕРВЕР В ГЛАВНОМ ПОТОКЕ (чтобы Render увидел порт)
 # ============================================================
-from flask import Flask, render_template_string
+from flask import Flask
 
 flask_app = Flask(__name__)
 
@@ -38,27 +38,29 @@ def index():
     return "Бот работает", 200
 
 def run_web():
-    flask_app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
+    port = int(os.environ.get('PORT', 10000))
+    flask_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
-# Запускаем в отдельном потоке, чтобы не блокировать бота
-thread = threading.Thread(target=run_web, daemon=True)
-thread.start()
-print("✅ Веб-сервер запущен (бот не заснёт)")
+# Запускаем веб-сервер в ОТДЕЛЬНОМ ПОТОКЕ, но он сразу открывает порт
+web_thread = threading.Thread(target=run_web, daemon=True)
+web_thread.start()
+print(f"✅ Веб-сервер запущен на порту {os.environ.get('PORT', 10000)}")
+
+# Даём время, чтобы порт открылся
+time.sleep(2)
 
 # ============================================================
-# 3. СОЗДАНИЕ БОТА
+# 2. БОТ
 # ============================================================
 bot = telebot.TeleBot(BOT_TOKEN)
 print("🤖 Бот создан")
 
-# ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ WEBHOOK (решает 409)
 try:
     bot.remove_webhook()
     print("✅ Webhook удалён")
 except Exception as e:
     print(f"⚠️ {e}")
 
-# ДОПОЛНИТЕЛЬНЫЙ СБРОС ЧЕРЕЗ API (если remove_webhook не сработал)
 try:
     requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook')
     print("✅ API-сброс webhook выполнен")
@@ -66,7 +68,7 @@ except:
     pass
 
 # ============================================================
-# 4. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# 3. ФУНКЦИИ
 # ============================================================
 def get_msk_time():
     msk = timezone(timedelta(hours=3))
@@ -82,7 +84,7 @@ def is_subscribed(user_id):
         return False
 
 # ============================================================
-# 5. КНОПКИ
+# 4. КНОПКИ
 # ============================================================
 def get_subscribe_button():
     kb = InlineKeyboardMarkup()
@@ -119,7 +121,7 @@ def get_support_button():
     return kb
 
 # ============================================================
-# 6. ОБРАБОТЧИКИ
+# 5. ОБРАБОТЧИКИ
 # ============================================================
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -239,15 +241,15 @@ def handle_webapp_data(message):
         bot.send_message(message.chat.id, "❌ Ошибка.", reply_markup=get_main_menu())
 
 # ============================================================
-# 7. ЗАПУСК С АВТОПЕРЕЗАПУСКОМ
+# 6. ЗАПУСК С АВТОПЕРЕЗАПУСКОМ
 # ============================================================
 print("🔄 Запуск polling...")
 
 while True:
     try:
-        print("✅ БОТ РАБОТАЕТ И НИКОГДА НЕ УПАДЁТ!")
+        print("✅ БОТ РАБОТАЕТ!")
         bot.polling(non_stop=True, interval=1, timeout=30)
     except Exception as e:
         print(f"❌ Ошибка: {e}\n{traceback.format_exc()}")
-        print("🔄 Перезапуск через 5 секунд...")
+        print("🔄 Перезапуск через 5 сек...")
         time.sleep(5)
