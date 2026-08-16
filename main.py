@@ -3,13 +3,15 @@ import os
 import time
 import json
 import traceback
+import threading
+import requests
 from datetime import datetime, timezone, timedelta
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 
-print("🚀 ЗАПУСК БОТА FLUXSHOP...")
+print("🚀 ЗАПУСК БОТА FLUXSHOP (МАКСИМАЛЬНАЯ ЗАЩИТА)...")
 
 # ============================================================
-# 🔥 ВСЕ ДАННЫЕ УЖЕ ВСТАВЛЕНЫ
+# 1. ТВОИ ДАННЫЕ (ВСЁ УЖЕ ВСТАВЛЕНО)
 # ============================================================
 BOT_TOKEN = "8917418368:AAFzB9LzRbNnYUF8YCK7ILKoGhWWnBLvXs4"
 CHANNEL_ID = "-1004393648334"
@@ -23,31 +25,54 @@ print(f"✅ Токен: {BOT_TOKEN[:10]}... (скрыто)")
 print(f"✅ CHANNEL_ID: {CHANNEL_ID}")
 print(f"✅ SELLER_ID: {SELLER_ID}")
 print(f"✅ SUPPORT_ID: {SUPPORT_ID}")
-print(f"✅ WEBAPP_URL: {WEBAPP_URL}")
 
 # ============================================================
-# 🕐 ВРЕМЯ ПО МСК
+# 2. ЗАЩИТА ОТ ЗАСЫПАНИЯ (Flask-сервер)
 # ============================================================
-def get_msk_time():
-    msk = timezone(timedelta(hours=3))
-    now = datetime.now(msk)
-    return now.strftime("%d.%m.%Y %H:%M:%S")
+from flask import Flask, render_template_string
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def index():
+    return "Бот работает", 200
+
+def run_web():
+    flask_app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
+
+# Запускаем в отдельном потоке, чтобы не блокировать бота
+thread = threading.Thread(target=run_web, daemon=True)
+thread.start()
+print("✅ Веб-сервер запущен (бот не заснёт)")
 
 # ============================================================
-# 🤖 СОЗДАНИЕ БОТА
+# 3. СОЗДАНИЕ БОТА
 # ============================================================
 bot = telebot.TeleBot(BOT_TOKEN)
 print("🤖 Бот создан")
 
+# ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ WEBHOOK (решает 409)
 try:
     bot.remove_webhook()
     print("✅ Webhook удалён")
 except Exception as e:
     print(f"⚠️ {e}")
 
+# ДОПОЛНИТЕЛЬНЫЙ СБРОС ЧЕРЕЗ API (если remove_webhook не сработал)
+try:
+    requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook')
+    print("✅ API-сброс webhook выполнен")
+except:
+    pass
+
 # ============================================================
-# 🔍 ПРОВЕРКА ПОДПИСКИ
+# 4. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ============================================================
+def get_msk_time():
+    msk = timezone(timedelta(hours=3))
+    now = datetime.now(msk)
+    return now.strftime("%d.%m.%Y %H:%M:%S")
+
 def is_subscribed(user_id):
     try:
         member = bot.get_chat_member(CHANNEL_ID, user_id)
@@ -57,7 +82,7 @@ def is_subscribed(user_id):
         return False
 
 # ============================================================
-# 🎛️ КНОПКИ
+# 5. КНОПКИ
 # ============================================================
 def get_subscribe_button():
     kb = InlineKeyboardMarkup()
@@ -94,7 +119,7 @@ def get_support_button():
     return kb
 
 # ============================================================
-# 📨 ОБРАБОТЧИКИ
+# 6. ОБРАБОТЧИКИ
 # ============================================================
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -121,7 +146,7 @@ def start_command(message):
                 reply_markup=get_check_button()
             )
     except Exception as e:
-        print(f"❌ start: {e}")
+        print(f"❌ start: {e}\n{traceback.format_exc()}")
 
 @bot.message_handler(func=lambda m: True)
 def all_messages(message):
@@ -156,7 +181,7 @@ def all_messages(message):
                 reply_markup=get_main_menu()
             )
     except Exception as e:
-        print(f"❌ all: {e}")
+        print(f"❌ all: {e}\n{traceback.format_exc()}")
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_subscription(call):
@@ -173,7 +198,7 @@ def check_subscription(call):
         else:
             bot.answer_callback_query(call.id, "❌ Вы не подписались!", show_alert=True)
     except Exception as e:
-        print(f"❌ check: {e}")
+        print(f"❌ check: {e}\n{traceback.format_exc()}")
 
 @bot.message_handler(content_types=['web_app_data'])
 def handle_webapp_data(message):
@@ -210,19 +235,19 @@ def handle_webapp_data(message):
                 reply_markup=get_main_menu()
             )
     except Exception as e:
-        print(f"❌ webapp: {e}")
+        print(f"❌ webapp: {e}\n{traceback.format_exc()}")
         bot.send_message(message.chat.id, "❌ Ошибка.", reply_markup=get_main_menu())
 
 # ============================================================
-# 🚀 ЗАПУСК С АВТОПЕРЕЗАПУСКОМ
+# 7. ЗАПУСК С АВТОПЕРЕЗАПУСКОМ
 # ============================================================
 print("🔄 Запуск polling...")
 
 while True:
     try:
-        print("✅ БОТ РАБОТАЕТ!")
+        print("✅ БОТ РАБОТАЕТ И НИКОГДА НЕ УПАДЁТ!")
         bot.polling(non_stop=True, interval=1, timeout=30)
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
-        print("🔄 Перезапуск через 5 сек...")
+        print(f"❌ Ошибка: {e}\n{traceback.format_exc()}")
+        print("🔄 Перезапуск через 5 секунд...")
         time.sleep(5)
